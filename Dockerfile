@@ -1,38 +1,54 @@
-FROM php:8.2-fpm-alpine AS php
+# Use an official PHP 8.2 image as the base image
+FROM php:8.2-cli
 
-# Install system dependencies
-RUN apk add --no-cache \
-    linux-headers \
-    bash \
+# Set the working directory inside the container
+WORKDIR /app
+
+# Install system dependencies and PHP extensions
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
     curl \
+    libzip-dev \
     libpng-dev \
+    libonig-dev \
     libxml2-dev \
-    zip \
-    unzip
+    && docker-php-ext-install pdo_mysql zip mbstring exif pcntl bcmath gd
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql bcmath exif pcntl
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Clear Composer cache
+RUN composer clear-cache
 
-# Set working directory
-WORKDIR /var/www
-
-# Copy project files
+# Copy the application files into the container
 COPY . .
 
-# Install dependencies
-RUN composer install --optimize-autoloader --no-dev
+# Copy .env.example to .env if .env does not exist
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-# Generate application key
+# Generate the Laravel application key
 RUN php artisan key:generate
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www
+# Install Node.js and Yarn
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g yarn
 
-# Expose port 9000
-EXPOSE 9000
+# Install JavaScript dependencies and build assets
+RUN yarn install && yarn prod
 
-# Start PHP-FPM
-CMD ["php-fpm"]
+# Clear cache
+RUN php artisan optimize:clear
+
+# Create a symbolic link for storage
+RUN php artisan storage:link
+
+# Run database migrations
+RUN php artisan migrate --force
+
+# Expose port 8000 for the application
+EXPOSE 8000
+
+# Start the Laravel development server
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
