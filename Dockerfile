@@ -45,7 +45,7 @@ RUN rm -f package-lock.json
 RUN yarn install && yarn build
 
 # Clear cache
-RUN php artisan optimize:clear
+# RUN php artisan optimize:clear
 
 # Create a symbolic link for storage
 RUN php artisan storage:link
