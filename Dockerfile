@@ -33,10 +33,13 @@ RUN if [ ! -f .env ]; then cp .env.example .env; fi
 # Generate the Laravel application key
 RUN php artisan key:generate
 
-# Install Node.js and Yarn
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
+# Install Node.js 18 and Yarn
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g yarn
+
+# Remove package-lock.json to avoid conflicts with Yarn
+RUN rm -f package-lock.json
 
 # Install JavaScript dependencies and build assets
 RUN yarn install && yarn prod
