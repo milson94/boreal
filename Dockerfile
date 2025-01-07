@@ -24,6 +24,9 @@ RUN composer clear-cache
 # Copy the application files into the container
 COPY . .
 
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader
+
 # Copy .env.example to .env if .env does not exist
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
